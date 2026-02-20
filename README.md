@@ -5,25 +5,33 @@ ANSI terminal board, adaptive AI, ELO tracking, and real-time coaching.
 
 ## Installation
 
-**Step 1:** Register this repo as a plugin marketplace in Claude Code:
+### Option A — Claude Code commands (preferred)
 
 ```
 /plugin marketplace add yongqyu/claude-chess
-```
-
-**Step 2:** Install the chess-coach plugin:
-
-```
 /plugin install chess-coach@claude-chess
 ```
 
-**Step 3:** Install the Python dependency (once):
+### Option B — Install script (if Option A doesn't work)
 
 ```bash
-pip install chess --break-system-packages -q
+curl -fsSL https://raw.githubusercontent.com/yongqyu/claude-chess/main/install.sh | bash
 ```
 
-**Step 4:** Start a new Claude Code session and say:
+Or clone and run locally:
+
+```bash
+git clone https://github.com/yongqyu/claude-chess.git
+bash claude-chess/install.sh
+```
+
+### Finish setup
+
+```bash
+pip install chess --break-system-packages -q   # Python dependency (once)
+```
+
+Start a new Claude Code session and say:
 
 > "Let's play chess"
 

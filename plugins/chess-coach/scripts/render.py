@@ -47,10 +47,10 @@ FG_GREEN = "\033[92m"
 FG_RED   = "\033[91m"
 FG_MAG   = "\033[95m"
 
-BG_LIGHT  = "\033[48;5;223m"   # warm light square
-BG_DARK   = "\033[48;5;137m"   # warm dark square
-BG_HL_L   = "\033[48;5;190m"   # highlighted light (last move)
-BG_HL_D   = "\033[48;5;100m"   # highlighted dark  (last move)
+BG_LIGHT  = "\033[48;2;240;217;181m"  # chess.com light tan
+BG_DARK   = "\033[48;2;181;136;99m"   # chess.com dark brown
+BG_HL_L   = "\033[48;2;205;210;106m"  # last-move highlight light
+BG_HL_D   = "\033[48;2;170;162;58m"   # last-move highlight dark
 
 CLEAR_AND_HOME = "\033[2J\033[H"
 
@@ -70,7 +70,7 @@ def render_board(board: chess.Board, last_uci: str | None = None) -> str:
         highlight.add(last_uci[:2])
         highlight.add(last_uci[2:4])
 
-    rows = [f"  {'─' * 33}"]
+    rows = [f"  ┌{'─' * 24}┐"]
     for rank in range(7, -1, -1):
         row = f"{BOLD}{FG_GRAY}{rank + 1}{RESET} │"
         for file in range(8):
@@ -94,7 +94,7 @@ def render_board(board: chess.Board, last_uci: str | None = None) -> str:
         row += f"{BOLD}{FG_GRAY}│{RESET}"
         rows.append(row)
 
-    rows.append(f"  {'─' * 33}")
+    rows.append(f"  └{'─' * 24}┘")
     rows.append(f"    {'  '.join('abcdefgh')}")
     return "\n".join(rows)
 

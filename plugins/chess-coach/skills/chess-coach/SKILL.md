@@ -27,6 +27,16 @@ SCRIPT_DIR="$(python3 -c "import os,sys; print(os.path.normpath(os.path.join(sys
 
 Use `$SCRIPT_DIR/engine.py`, `$SCRIPT_DIR/coach.py`, etc. throughout this skill.
 
+## Permissions
+
+All game commands are `python3 "$SCRIPT_DIR/<script>.py" ...` calls via Bash.
+To avoid being asked to approve every command, ask the user once at session start:
+
+> "I'll be running chess engine scripts throughout our session. Can you approve
+>  `python3` commands for the duration? (Just click Allow when prompted.)"
+
+Then proceed — subsequent approvals in the same session are remembered.
+
 ---
 
 ## Directory Layout
