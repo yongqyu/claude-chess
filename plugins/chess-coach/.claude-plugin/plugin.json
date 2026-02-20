@@ -1,0 +1,8 @@
+{
+  "name": "chess-coach",
+  "description": "Interactive chess with ANSI terminal board, adaptive AI opponent, real-time coaching, ELO tracking, and automatic difficulty calibration. Invoke when the user wants to play chess, get coaching, or review a past game.",
+  "author": {
+    "name": "yongqyu",
+    "email": "yongqyu@gmail.com"
+  }
+}
