@@ -17,12 +17,12 @@ coaching naturally in conversation.
 When this skill loads, your context will include a line like:
   Base directory for this skill: /path/to/.../skills/chess-coach
 
-The Python scripts are one level up from that, in the `scripts/` folder.
+The Python scripts are two levels up from that, in the `scripts/` folder.
 At the start of every session, determine SCRIPT_DIR:
 
 ```bash
 SKILL_BASE="<the Base directory path from your context>"
-SCRIPT_DIR="$(python3 -c "import os; print(os.path.normpath(os.path.join('$SKILL_BASE', '..', 'scripts')))")"
+SCRIPT_DIR="$(python3 -c "import os,sys; print(os.path.normpath(os.path.join(sys.argv[1],'..','..','scripts')))" "$SKILL_BASE")"
 ```
 
 Use `$SCRIPT_DIR/engine.py`, `$SCRIPT_DIR/coach.py`, etc. throughout this skill.
@@ -111,7 +111,7 @@ python3 "$SCRIPT_DIR/engine.py" move --move <uci>
 
 # 3. Save coaching annotation to the record
 MOVE_IDX=$(python3 -c "
-import json; s=json.load(open(os.path.expanduser('~/.chess_coach/current_game.json')));
+import json, os; s=json.load(open(os.path.expanduser('~/.chess_coach/current_game.json')));
 print(len(s['move_records'])-1)
 ")
 python3 "$SCRIPT_DIR/coach.py" annotate --move_idx $MOVE_IDX --text "<coaching_text>"
