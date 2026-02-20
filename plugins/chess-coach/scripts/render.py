@@ -47,10 +47,16 @@ FG_GREEN = "\033[92m"
 FG_RED   = "\033[91m"
 FG_MAG   = "\033[95m"
 
-BG_LIGHT  = "\033[48;2;240;217;181m"  # chess.com light tan
-BG_DARK   = "\033[48;2;181;136;99m"   # chess.com dark brown
-BG_HL_L   = "\033[48;2;205;210;106m"  # last-move highlight light
-BG_HL_D   = "\033[48;2;170;162;58m"   # last-move highlight dark
+BG_LIGHT  = "\033[48;2;240;240;240m"  # near-white square
+BG_DARK   = "\033[48;2;40;40;40m"    # near-black square
+BG_HL_L   = "\033[48;2;180;220;180m" # last-move highlight light (green tint)
+BG_HL_D   = "\033[48;2;30;100;30m"   # last-move highlight dark (dark green)
+
+# Piece foreground colors — adjusted per square brightness for contrast
+FG_W_ON_LIGHT = "\033[38;2;80;80;80m"    # white piece on light sq: dark gray
+FG_W_ON_DARK  = "\033[97m"               # white piece on dark sq:  bright white
+FG_B_ON_LIGHT = "\033[30m"               # black piece on light sq: true black
+FG_B_ON_DARK  = "\033[38;2;190;190;190m" # black piece on dark sq:  light gray
 
 CLEAR_AND_HOME = "\033[2J\033[H"
 
@@ -87,7 +93,10 @@ def render_board(board: chess.Board, last_uci: str | None = None) -> str:
             piece = board.piece_at(sq)
             if piece:
                 symbol = PIECE_UNICODE[piece.symbol()]
-                fg     = FG_WHITE if piece.color == chess.WHITE else FG_BLACK
+                if piece.color == chess.WHITE:
+                    fg = FG_W_ON_LIGHT if light else FG_W_ON_DARK
+                else:
+                    fg = FG_B_ON_LIGHT if light else FG_B_ON_DARK
                 row   += f"{bg}{fg}{BOLD} {symbol} {RESET}"
             else:
                 row   += f"{bg}   {RESET}"
