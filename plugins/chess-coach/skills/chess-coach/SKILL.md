@@ -106,6 +106,32 @@ python3 "$SCRIPT_DIR/render.py" --clear
 Use `--clear` on every render during gameplay to keep the board fixed at the
 top of the terminal.
 
+**Always also print a plain-text board in the conversation** so the user can
+see the position without looking at the terminal. After every render, output
+this in your reply:
+
+```python
+import chess, json, os
+state = json.load(open(os.path.expanduser('~/.chess_coach/current_game.json')))
+board = chess.Board()
+for uci in state.get('moves_uci', []): board.push(chess.Move.from_uci(uci))
+pieces = {'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟'}
+print('\n    a   b   c   d   e   f   g   h')
+print('  ┌───┬───┬───┬───┬───┬───┬───┬───┐')
+for rank in range(7,-1,-1):
+    row = f'{rank+1} │'
+    for file in range(8):
+        p = board.piece_at(chess.square(file,rank))
+        row += f' {pieces[p.symbol()] if p else " "} │'
+    print(row)
+    if rank > 0: print('  ├───┼───┼───┼───┼───┼───┼───┼───┤')
+print('  └───┴───┴───┴───┴───┴───┴───┴───┘')
+print('    a   b   c   d   e   f   g   h')
+```
+
+Include the output as a code block in your reply so the user sees the board
+in the conversation without needing to look at the terminal.
+
 ---
 
 ## Play Mode — Per-Turn Flow
@@ -126,11 +152,12 @@ print(len(s['move_records'])-1)
 ")
 python3 "$SCRIPT_DIR/coach.py" annotate --move_idx $MOVE_IDX --text "<coaching_text>"
 
-# 4. Re-render
+# 4. Re-render (terminal + plain-text in reply)
 python3 "$SCRIPT_DIR/render.py" --clear
 ```
 
-Claude then relays `coaching_lines` from step 1 conversationally.
+Claude then relays `coaching_lines` from step 1 conversationally,
+and includes the plain-text board in the reply (see Step 3 above).
 
 ### AI's move
 
@@ -141,11 +168,12 @@ python3 "$SCRIPT_DIR/engine.py" ai_move
 # 2. Generate and persist AI explanation
 python3 "$SCRIPT_DIR/coach.py" explain_ai
 
-# 3. Re-render
+# 3. Re-render (terminal + plain-text in reply)
 python3 "$SCRIPT_DIR/render.py" --clear
 ```
 
-Claude relays `coaching_lines` from explain_ai.
+Claude relays `coaching_lines` from explain_ai,
+and includes the plain-text board in the reply (see Step 3 above).
 
 ---
 
