@@ -12,6 +12,21 @@ All game logic lives in Python scripts. Claude acts as orchestrator:
 calls scripts in the correct order, reads their JSON output, and delivers
 coaching naturally in conversation.
 
+## Finding the Scripts
+
+When this skill loads, your context will include a line like:
+  Base directory for this skill: /path/to/.../skills/chess-coach
+
+The Python scripts are one level up from that, in the `scripts/` folder.
+At the start of every session, determine SCRIPT_DIR:
+
+```bash
+SKILL_BASE="<the Base directory path from your context>"
+SCRIPT_DIR="$(python3 -c "import os; print(os.path.normpath(os.path.join('$SKILL_BASE', '..', 'scripts')))")"
+```
+
+Use `$SCRIPT_DIR/engine.py`, `$SCRIPT_DIR/coach.py`, etc. throughout this skill.
+
 ---
 
 ## Directory Layout
@@ -48,7 +63,7 @@ pip install chess --break-system-packages -q
 ### Step 1 — Load player profile and recommend difficulty
 
 ```bash
-python3 scripts/profile.py recommend
+python3 "$SCRIPT_DIR/profile.py" recommend
 ```
 
 Read `recommended_level` and `note` from the output.
@@ -59,7 +74,7 @@ Read `recommended_level` and `note` from the output.
 ### Step 2 — Start a new game
 
 ```bash
-python3 scripts/engine.py new_game \
+python3 "$SCRIPT_DIR/engine.py" new_game \
   --color white \           # or black — ask the user
   --level intermediate \    # resolved from profile or user override
   --mode play               # play | coach
@@ -67,15 +82,15 @@ python3 scripts/engine.py new_game \
 
 **If user plays Black:** the AI moves first immediately after new_game:
 ```bash
-python3 scripts/engine.py ai_move
-python3 scripts/coach.py explain_ai
-python3 scripts/render.py --clear
+python3 "$SCRIPT_DIR/engine.py" ai_move
+python3 "$SCRIPT_DIR/coach.py" explain_ai
+python3 "$SCRIPT_DIR/render.py" --clear
 ```
 
 ### Step 3 — Render the board
 
 ```bash
-python3 scripts/render.py --clear
+python3 "$SCRIPT_DIR/render.py" --clear
 ```
 
 Use `--clear` on every render during gameplay to keep the board fixed at the
@@ -89,20 +104,20 @@ top of the terminal.
 
 ```bash
 # 1. Evaluate BEFORE committing (for coaching feedback)
-python3 scripts/coach.py evaluate_user --move <uci>
+python3 "$SCRIPT_DIR/coach.py" evaluate_user --move <uci>
 
 # 2. Commit the move
-python3 scripts/engine.py move --move <uci>
+python3 "$SCRIPT_DIR/engine.py" move --move <uci>
 
 # 3. Save coaching annotation to the record
 MOVE_IDX=$(python3 -c "
 import json; s=json.load(open(os.path.expanduser('~/.chess_coach/current_game.json')));
 print(len(s['move_records'])-1)
 ")
-python3 scripts/coach.py annotate --move_idx $MOVE_IDX --text "<coaching_text>"
+python3 "$SCRIPT_DIR/coach.py" annotate --move_idx $MOVE_IDX --text "<coaching_text>"
 
 # 4. Re-render
-python3 scripts/render.py --clear
+python3 "$SCRIPT_DIR/render.py" --clear
 ```
 
 Claude then relays `coaching_lines` from step 1 conversationally.
@@ -111,13 +126,13 @@ Claude then relays `coaching_lines` from step 1 conversationally.
 
 ```bash
 # 1. Calculate and commit AI move
-python3 scripts/engine.py ai_move
+python3 "$SCRIPT_DIR/engine.py" ai_move
 
 # 2. Generate and persist AI explanation
-python3 scripts/coach.py explain_ai
+python3 "$SCRIPT_DIR/coach.py" explain_ai
 
 # 3. Re-render
-python3 scripts/render.py --clear
+python3 "$SCRIPT_DIR/render.py" --clear
 ```
 
 Claude relays `coaching_lines` from explain_ai.
@@ -156,10 +171,10 @@ When any engine/ai_move response returns `"is_game_over": true`:
 
 ```bash
 # 1. Generate review
-python3 scripts/review.py --output ~/.chess_coach/reviews/review_<timestamp>.md
+python3 "$SCRIPT_DIR/review.py" --output ~/.chess_coach/reviews/review_<timestamp>.md
 
 # 2. Update player profile with ELO from this game
-python3 scripts/profile.py update --state ~/.chess_coach/current_game.json
+python3 "$SCRIPT_DIR/profile.py" update --state ~/.chess_coach/current_game.json
 
 # 3. Announce result and ELO update
 ```
@@ -175,8 +190,8 @@ All game data is persisted in `~/.chess_coach/current_game.json`.
 If Claude loses context mid-game, recover instantly:
 
 ```bash
-python3 scripts/engine.py status
-python3 scripts/render.py --clear
+python3 "$SCRIPT_DIR/engine.py" status
+python3 "$SCRIPT_DIR/render.py" --clear
 ```
 
 Tell the user: "I've reloaded the game from disk — here's the current position."
