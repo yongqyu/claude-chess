@@ -171,7 +171,7 @@ When any engine/ai_move response returns `"is_game_over": true`:
 
 ```bash
 # 1. Generate review
-python3 "$SCRIPT_DIR/review.py" --output ~/.chess_coach/reviews/review_<timestamp>.md
+python3 "$SCRIPT_DIR/review.py" --output ~/.chess_coach/reviews/review_$(date +%Y%m%d_%H%M%S).md
 
 # 2. Update player profile with ELO from this game
 python3 "$SCRIPT_DIR/profile.py" update --state ~/.chess_coach/current_game.json
