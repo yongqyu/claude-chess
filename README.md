@@ -66,8 +66,9 @@ ANSI color codes are terminal-only — they can't render in markdown chat. The c
 ## Features
 
 - **Two board views** — plain Unicode board in the chat after every move; full color ANSI board with highlighted last move and win-probability bar in the terminal (`Ctrl+O` in Claude Code)
+- **Personas** — play against historical chess legends (Fischer, Tal, Petrosian, Carlsen), each with their own opening repertoire, aggression level, and coaching voice; or extract a persona from any game record collection
 - **Real-time coaching** — rates every move (brilliant ✨ / good ✅ / inaccuracy ⚠️ / mistake ❌ / blunder 💀), shows win probability shift, and suggests better alternatives
-- **AI explains itself** — after every AI move, Claude tells you *why* it played that
+- **AI explains itself** — after every AI move, Claude tells you *why* it played that, in the active persona's voice
 - **Opening detection** — recognizes 20 common openings and names them as they appear
 - **ELO tracking** — estimates your ELO from each game using average centipawn loss + blunder rate, smoothed across sessions
 - **Auto difficulty** — reads your game history at startup and sets difficulty to match your level
@@ -92,6 +93,35 @@ Then open a Claude Code session and just say:
 > **"Let's play chess"**
 
 That's it. Claude handles the rest — asks your color preference, checks your game history, sets difficulty, and opens the board.
+
+---
+
+## Personas
+
+Instead of playing against a generic AI, choose a persona — a bot with a distinct playing style, opening repertoire, and character voice.
+
+At the start of every game Claude asks: **"Play against the standard AI, or choose a persona?"**
+
+**Bundled personas:**
+
+| Persona | Style | Aggression | Depth |
+|---------|-------|-----------|-------|
+| Bobby Fischer | Precise, open games, e4 | High | 3 |
+| Mikhail Tal | Sacrificial chaos, king attacks | Max | 3 |
+| Tigran Petrosian | Prophylactic, exchange-heavy | Low | 3 |
+| Magnus Carlsen | Universal, endgame-dominant | Medium | 3 |
+
+Each persona narrates the game in their own voice — Fischer is cold and clinical, Tal is gleefully provocative, Petrosian is quiet and ominous.
+
+**Extract your own persona** from your game history or any PGN file:
+
+> *"Extract a persona from my games"*
+
+Or from a PGN file of a historical player:
+
+> *"Extract a persona from Magnus's games"* (then provide the PGN path)
+
+See [PERSONAS.md](PERSONAS.md) for the full details on how personas work and how to create them.
 
 ---
 
@@ -133,13 +163,23 @@ Everything is plain Python scripts. Claude just calls them in sequence and trans
 
 ```
 scripts/
-  common.py    Evaluation, minimax, opening DB, ELO formula
-  engine.py    Move validation, AI moves, game state
-  coach.py     Move quality, coaching text, annotations
-  render.py    Board renderer — `--plain` for chat, `--clear` for ANSI terminal
-  profile.py   ELO history, difficulty recommendation
-  review.py    End-of-game Markdown review
+  common.py       Evaluation, minimax, opening DB, ELO formula
+  engine.py       Move validation, AI moves (--persona flag), game state
+  coach.py        Move quality, coaching text, annotations
+  render.py       Board renderer — `--plain` for chat, `--clear` for ANSI terminal
+  profile.py      ELO history, difficulty recommendation
+  review.py       End-of-game Markdown review
+  persona.py      Persona management — list, show, extract, import PGN
+  pgn_adapter.py  Converts PGN files to internal game record format
+
+personas/
+  fischer.json    Bobby Fischer
+  tal.json        Mikhail Tal
+  petrosian.json  Tigran Petrosian
+  carlsen.json    Magnus Carlsen
 ```
+
+User-extracted personas are saved to `~/.chess_coach/personas/` and override bundled ones with the same ID.
 
 All game state is saved to `~/.chess_coach/current_game.json` after every move. If Claude loses context mid-game (long sessions), it recovers instantly by reading the file — you won't lose your position.
 
@@ -156,10 +196,11 @@ All game state is saved to `~/.chess_coach/current_game.json` after every move. 
 ## Ideas for contributors
 
 - Stockfish integration (optional, for stronger analysis)
-- PGN import to review your own games
+- More bundled historical personas (Kasparov, Karpov, Morphy…)
 - More openings in the detection database
 - Endgame and tactical pattern coaching
 - A `--flip` flag to render the board from Black's perspective
+- Persona vs persona simulation (two bots)
 
 PRs welcome!
 
