@@ -3,7 +3,7 @@
 pgn_adapter.py — Convert PGN files to internal game record format.
 
 Usage:
-  python3 pgn_adapter.py --pgn FILE --player NAME --output-dir DIR
+  python3 pgn_adapter.py --pgn FILE --player NAME --output DIR
 """
 
 import argparse
@@ -20,7 +20,7 @@ import chess
 import chess.pgn
 
 
-def convert_game(game: chess.pgn.Game, player_name: str) -> dict:
+def convert_game(game: chess.pgn.Game, player_name: str) -> dict | None:
     headers = game.headers
     white   = headers.get("White", "")
     black   = headers.get("Black", "")
@@ -31,7 +31,7 @@ def convert_game(game: chess.pgn.Game, player_name: str) -> dict:
     elif player_name.lower() in black.lower():
         player_color = "black"
     else:
-        player_color = "white"
+        return None
 
     players = {
         "white": player_name if player_color == "white" else "ai",
@@ -86,14 +86,14 @@ def convert_game(game: chess.pgn.Game, player_name: str) -> dict:
 
 def main():
     p = argparse.ArgumentParser(description="PGN to internal game records")
-    p.add_argument("--pgn",        required=True)
-    p.add_argument("--player",     required=True)
-    p.add_argument("--output-dir", required=True)
+    p.add_argument("--pgn",    required=True)
+    p.add_argument("--player", required=True)
+    p.add_argument("--output", required=True)
     args = p.parse_args()
 
-    args.pgn        = os.path.expanduser(args.pgn)
-    args.output_dir = os.path.expanduser(args.output_dir)
-    os.makedirs(args.output_dir, exist_ok=True)
+    args.pgn    = os.path.expanduser(args.pgn)
+    args.output = os.path.expanduser(args.output)
+    os.makedirs(args.output, exist_ok=True)
 
     with open(args.pgn) as f:
         content = f.read()
@@ -106,14 +106,16 @@ def main():
         if game is None:
             break
         record = convert_game(game, args.player)
+        if record is None:
+            continue
         ts     = datetime.now().strftime(f"%Y%m%d_%H%M%S_{games_written:04d}")
-        out    = os.path.join(args.output_dir, f"game_{ts}.json")
+        out    = os.path.join(args.output, f"game_{ts}.json")
         with open(out, "w") as f:
             json.dump(record, f, indent=2, ensure_ascii=False)
         games_written += 1
 
     print(json.dumps({"ok": True, "games_written": games_written,
-                      "output_dir": args.output_dir}, indent=2))
+                      "output_dir": args.output}, indent=2))
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@ persona.py — Persona management for chess-coach.
 Commands:
   list         [--bundled-dir DIR] [--user-dir DIR]
   show         --id ID [--bundled-dir DIR] [--user-dir DIR]
-  extract      --actor NAME --id ID --output PATH [--games-dir DIR]
-  import_pgn   --pgn FILE --player NAME --id ID --output PATH
+  extract      --actor NAME --id ID [--games-dir DIR]
+  import_pgn   --pgn FILE --player NAME --id ID [--output PATH]
 
 Output: JSON to stdout.
 """
@@ -48,8 +48,6 @@ def list_personas(bundled_dir: str, user_dir: str) -> list[dict]:
                     "id":     p["id"],
                     "name":   p["name"],
                     "source": p["source"],
-                    "description": p.get("description", ""),
-                    "games_analyzed": p.get("games_analyzed", 0),
                 }
             except Exception:
                 pass
@@ -87,7 +85,18 @@ def extract_machine_layer(actor: str, games_dir: str) -> dict | None:
         if not actor_records:
             continue
 
-        all_records.extend(actor_records)
+        # Track per-game move index per color for opening_moves computation
+        white_move_idx = 0
+        black_move_idx = 0
+        for r in records:
+            color = r.get("player")
+            if color == "white":
+                r = dict(r, _white_move_idx=white_move_idx)
+                white_move_idx += 1
+            elif color == "black":
+                r = dict(r, _black_move_idx=black_move_idx)
+                black_move_idx += 1
+            all_records.append(r)
         game_count += 1
 
     if not all_records:
@@ -95,21 +104,24 @@ def extract_machine_layer(actor: str, games_dir: str) -> dict | None:
 
     def top_moves(color, n=5):
         c = Counter()
+        idx_key = f"_{color}_move_idx"
         for r in all_records:
-            if r.get("player") == color:
-                c[r["move_san"]] += 1
+            if r.get("actor") == actor and r.get("player") == color:
+                if r.get(idx_key, 999) < 5:
+                    c[r["move_san"]] += 1
         return [m for m, _ in c.most_common(n)]
 
     white_moves = top_moves("white")
     black_moves = top_moves("black")
 
-    total    = len(all_records)
-    captures = sum(1 for r in all_records if "x" in r.get("move_san", ""))
+    actor_records = [r for r in all_records if r.get("actor") == actor]
+    total    = len(actor_records)
+    captures = sum(1 for r in actor_records if "x" in r.get("move_san", ""))
     aggression = round(captures / total, 3) if total else 0.0
 
-    white_count    = sum(1 for r in all_records if r.get("player") == "white")
+    white_count    = sum(1 for r in actor_records if r.get("player") == "white")
     dominant_color = "white" if white_count >= total / 2 else "black"
-    elo_data       = estimate_elo(all_records, player=dominant_color)
+    elo_data       = estimate_elo(actor_records, player=dominant_color)
 
     acpl         = elo_data.get("acpl") or 80.0
     blunder_rate = elo_data.get("blunder_rate") or 0.05
@@ -148,11 +160,7 @@ def cmd_extract(args) -> dict:
         **machine,
     }
 
-    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    with open(args.output, "w") as f:
-        json.dump(persona, f, indent=2, ensure_ascii=False)
-
-    return {"ok": True, **machine, "opening_moves": machine["opening_moves"]}
+    return {"ok": True, "persona": persona}
 
 
 def cmd_import_pgn(args) -> dict:
@@ -164,7 +172,7 @@ def cmd_import_pgn(args) -> dict:
 
     r = subprocess.run(
         [sys.executable, adapter,
-         "--pgn", args.pgn, "--player", args.player, "--output-dir", tmp_dir],
+         "--pgn", args.pgn, "--player", args.player, "--output", tmp_dir],
         capture_output=True, text=True
     )
     try:
@@ -191,11 +199,12 @@ def cmd_import_pgn(args) -> dict:
         **machine,
     }
 
-    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-    with open(args.output, "w") as f:
-        json.dump(persona, f, indent=2, ensure_ascii=False)
+    if args.output:
+        os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+        with open(args.output, "w") as f:
+            json.dump(persona, f, indent=2, ensure_ascii=False)
 
-    return {"ok": True, "games_processed": adapter_result["games_written"], **machine}
+    return {"ok": True, "persona": persona}
 
 
 def main():
@@ -214,7 +223,6 @@ def main():
     ex = sub.add_parser("extract")
     ex.add_argument("--actor",     required=True)
     ex.add_argument("--id",        required=True)
-    ex.add_argument("--output",    required=True)
     ex.add_argument("--games-dir", default=GAMES_DIR_DEFAULT)
     ex.add_argument("--bundled-dir", default=BUNDLED_DIR_DEFAULT)
     ex.add_argument("--user-dir",    default=USER_DIR_DEFAULT)
@@ -223,7 +231,7 @@ def main():
     ip.add_argument("--pgn",    required=True)
     ip.add_argument("--player", required=True)
     ip.add_argument("--id",     required=True)
-    ip.add_argument("--output", required=True)
+    ip.add_argument("--output", default=None)
     ip.add_argument("--bundled-dir", default=BUNDLED_DIR_DEFAULT)
     ip.add_argument("--user-dir",    default=USER_DIR_DEFAULT)
 
@@ -232,7 +240,7 @@ def main():
     args.user_dir    = os.path.expanduser(args.user_dir)
     if hasattr(args, "games_dir"):
         args.games_dir = os.path.expanduser(args.games_dir)
-    if hasattr(args, "output"):
+    if hasattr(args, "output") and args.output:
         args.output = os.path.expanduser(args.output)
 
     dispatch = {

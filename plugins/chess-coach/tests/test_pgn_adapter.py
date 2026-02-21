@@ -22,7 +22,7 @@ def run_adapter(pgn_text, player="Fischer", output_dir=None):
     out_dir = output_dir or tempfile.mkdtemp()
     r = subprocess.run(
         [sys.executable, f"{SCRIPTS}/pgn_adapter.py",
-         "--pgn", pgn_path, "--player", player, "--output-dir", out_dir],
+         "--pgn", pgn_path, "--player", player, "--output", out_dir],
         capture_output=True, text=True
     )
     result = json.loads(r.stdout)
@@ -64,3 +64,11 @@ def test_adapter_multi_game_pgn():
     two_games = SAMPLE_PGN + "\n" + SAMPLE_PGN.replace("1-0", "0-1")
     result, _ = run_adapter(two_games)
     assert result["games_written"] == 2
+
+
+def test_adapter_skips_non_matching_player():
+    result, out_dir = run_adapter(SAMPLE_PGN, player="Kasparov")
+    assert result["ok"] is True
+    assert result["games_written"] == 0
+    game_files = [f for f in os.listdir(out_dir) if f.endswith(".json")]
+    assert len(game_files) == 0

@@ -30,6 +30,13 @@ def test_list_includes_source_field():
     assert fischer["source"] == "historical"
 
 
+def test_list_only_has_id_name_source():
+    result = run([sys.executable, f"{SCRIPTS}/persona.py", "list",
+                  "--bundled-dir", PERSONAS, "--user-dir", "/tmp/nonexistent"])
+    for p in result["personas"]:
+        assert set(p.keys()) == {"id", "name", "source"}
+
+
 def test_show_returns_full_persona():
     result = run([sys.executable, f"{SCRIPTS}/persona.py", "show",
                   "--id", "fischer",
@@ -69,61 +76,52 @@ def write_game_files(tmp_path, records_list):
 
 def test_extract_opening_moves_white(tmp_path, sample_game_records):
     write_game_files(tmp_path, sample_game_records)
-    out = tmp_path / "tester.json"
     result = run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
                   "--actor", "tester", "--id", "tester",
-                  "--games-dir", str(tmp_path), "--output", str(out)])
+                  "--games-dir", str(tmp_path)])
     assert result["ok"] is True
-    assert "e4" in result["opening_moves"]["white"]
+    assert "persona" in result
+    assert "e4" in result["persona"]["opening_moves"]["white"]
 
 
 def test_extract_opening_moves_black(tmp_path, sample_game_records):
     write_game_files(tmp_path, sample_game_records)
-    out = tmp_path / "tester.json"
-    run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
-         "--actor", "tester", "--id", "tester",
-         "--games-dir", str(tmp_path), "--output", str(out)])
-    persona = json.loads(out.read_text())
-    assert "c5" in persona["opening_moves"]["black"]
+    result = run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
+                  "--actor", "tester", "--id", "tester",
+                  "--games-dir", str(tmp_path)])
+    assert "c5" in result["persona"]["opening_moves"]["black"]
 
 
 def test_extract_aggression_is_float(tmp_path, sample_game_records):
     write_game_files(tmp_path, sample_game_records)
-    out = tmp_path / "tester.json"
-    run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
-         "--actor", "tester", "--id", "tester",
-         "--games-dir", str(tmp_path), "--output", str(out)])
-    persona = json.loads(out.read_text())
-    assert 0.0 <= persona["aggression"] <= 1.0
+    result = run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
+                  "--actor", "tester", "--id", "tester",
+                  "--games-dir", str(tmp_path)])
+    assert 0.0 <= result["persona"]["aggression"] <= 1.0
 
 
 def test_extract_games_analyzed_count(tmp_path, sample_game_records):
     write_game_files(tmp_path, sample_game_records)
-    out = tmp_path / "tester.json"
-    run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
-         "--actor", "tester", "--id", "tester",
-         "--games-dir", str(tmp_path), "--output", str(out)])
-    persona = json.loads(out.read_text())
-    assert persona["games_analyzed"] == 2
+    result = run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
+                  "--actor", "tester", "--id", "tester",
+                  "--games-dir", str(tmp_path)])
+    assert result["persona"]["games_analyzed"] == 2
 
 
 def test_extract_depth_derived_from_acpl(tmp_path, sample_game_records):
     write_game_files(tmp_path, sample_game_records)
-    out = tmp_path / "tester.json"
-    run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
-         "--actor", "tester", "--id", "tester",
-         "--games-dir", str(tmp_path), "--output", str(out)])
-    persona = json.loads(out.read_text())
-    assert persona["depth"] in [1, 2, 3]
+    result = run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
+                  "--actor", "tester", "--id", "tester",
+                  "--games-dir", str(tmp_path)])
+    assert result["persona"]["depth"] in [1, 2, 3]
 
 
 def test_extract_character_layer_empty(tmp_path, sample_game_records):
     write_game_files(tmp_path, sample_game_records)
-    out = tmp_path / "tester.json"
-    run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
-         "--actor", "tester", "--id", "tester",
-         "--games-dir", str(tmp_path), "--output", str(out)])
-    persona = json.loads(out.read_text())
+    result = run([sys.executable, f"{SCRIPTS}/persona.py", "extract",
+                  "--actor", "tester", "--id", "tester",
+                  "--games-dir", str(tmp_path)])
+    persona = result["persona"]
     assert persona["description"] == ""
     assert persona["personality"] == ""
     assert persona["move_voice"] == ""
