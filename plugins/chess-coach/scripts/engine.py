@@ -5,7 +5,7 @@ engine.py — Chess game logic, move validation, AI, and state persistence.
 Commands:
   new_game   --state FILE [--color white|black] [--level auto|beginner|intermediate|advanced] [--mode play|coach]
   move       --state FILE --move <san_or_uci>
-  ai_move    --state FILE
+  ai_move    --state FILE [--persona ID] [--bundled-persona-dir DIR]
   legal      --state FILE
   status     --state FILE
 
@@ -47,8 +47,9 @@ def load_persona_for_engine(persona_id: str, bundled_dir: str) -> dict | None:
             try:
                 with open(path) as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except (OSError, json.JSONDecodeError) as e:
+                import sys
+                print(f"Warning: could not load persona from {path}: {e}", file=sys.stderr)
     return None
 
 
@@ -315,7 +316,7 @@ def cmd_ai_move(args) -> dict:
         "result":        state["result"],
         "moves_san":     state["moves_san"],
         "opening":       state.get("opening"),
-        "persona_used":  persona["id"] if persona else None,
+        "persona_used":  persona.get("id") if persona else None,
     }
 
 
@@ -394,6 +395,9 @@ def main():
     lg.add_argument("--state", default="~/.chess_coach/current_game.json")
 
     args = p.parse_args()
+    if not args.command:
+        p.print_help()
+        sys.exit(1)
     # Expand ~ in state path
     args.state = os.path.expanduser(args.state)
 

@@ -6,6 +6,7 @@ Do not run directly.
 """
 
 import math
+import random
 import chess
 
 # ---------------------------------------------------------------------------
@@ -150,7 +151,6 @@ def get_best_move(
     blunder_pct: probability of playing a random move (beginner simulation).
     aggression: 0.0–1.0; adds a bonus (up to 50 cp) for captures and checks.
     """
-    import random
     moves = list(board.legal_moves)
     if not moves:
         return None, 0
@@ -167,18 +167,15 @@ def get_best_move(
     aggression_bonus = int(aggression * 50)
 
     for move in moves:
+        is_capture = board.is_capture(move)  # check before push
         board.push(move)
         val = minimax(board, depth - 1, -999999, 999999, not is_white)
-        board.pop()
-
-        # Apply aggression bonus for captures and checks
+        # Apply aggression bonus inside the same push context
         if aggression_bonus > 0:
-            is_capture = board.is_capture(move)
-            board.push(move)
             gives_check = board.is_check()
-            board.pop()
             if is_capture or gives_check:
                 val = val + aggression_bonus if is_white else val - aggression_bonus
+        board.pop()
 
         if (is_white and val > best_val) or (not is_white and val < best_val):
             best_val, best_move = val, move
