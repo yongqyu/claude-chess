@@ -76,6 +76,27 @@ Read `nickname`, `recommended_level`, and `note` from the output.
 - Otherwise: say "Based on your last N games (ELO ~X), I'll set difficulty to Y."
 - Always let the user override.
 
+### Step 1b — Persona selection (optional)
+
+```bash
+python3 "$SCRIPT_DIR/persona.py" list \
+  --bundled-dir "$SCRIPT_DIR/../personas" \
+  --user-dir ~/.chess_coach/personas
+```
+
+Show the available personas to the user with their names and descriptions.
+Ask: "Play against the standard AI, or choose a persona?"
+
+- If user chooses a persona: set `PERSONA_ID` for this session, load its full data:
+  ```bash
+  python3 "$SCRIPT_DIR/persona.py" show --id "$PERSONA_ID" \
+    --bundled-dir "$SCRIPT_DIR/../personas" \
+    --user-dir ~/.chess_coach/personas
+  ```
+  Read `description`, `personality`, `move_voice`, `coaching_voice` — hold in context.
+  Introduce: "You'll be playing against **\<name\>**. \<description\>"
+- If standard AI: `PERSONA_ID` is empty, proceed normally.
+
 ### Step 2 — Start a new game
 
 ```bash
@@ -88,7 +109,8 @@ python3 "$SCRIPT_DIR/engine.py" new_game \
 
 **If user plays Black:** the AI moves first immediately after new_game:
 ```bash
-python3 "$SCRIPT_DIR/engine.py" ai_move
+python3 "$SCRIPT_DIR/engine.py" ai_move \
+  ${PERSONA_ID:+--persona "$PERSONA_ID" --bundled-persona-dir "$SCRIPT_DIR/../personas"}
 python3 "$SCRIPT_DIR/coach.py" explain_ai
 python3 "$SCRIPT_DIR/render.py" --clear
 ```
@@ -135,7 +157,8 @@ and includes `$BOARD` as a code block in the reply.
 
 ```bash
 # 1. Calculate and commit AI move
-python3 "$SCRIPT_DIR/engine.py" ai_move
+python3 "$SCRIPT_DIR/engine.py" ai_move \
+  ${PERSONA_ID:+--persona "$PERSONA_ID" --bundled-persona-dir "$SCRIPT_DIR/../personas"}
 
 # 2. Generate and persist AI explanation
 python3 "$SCRIPT_DIR/coach.py" explain_ai
@@ -146,6 +169,7 @@ BOARD=$(python3 "$SCRIPT_DIR/render.py" --plain)
 
 Claude relays `coaching_lines` from explain_ai,
 and includes `$BOARD` as a code block in the reply.
+If a persona is active, narrate the AI move **in the persona's `move_voice` style** — brief, in character. After user moves, react in `coaching_voice` style: one sentence as that persona would say it. Do not break character during gameplay.
 
 ---
 
