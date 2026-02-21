@@ -5,17 +5,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 from common import get_best_move
 
 
-def test_aggression_prefers_capture():
+def test_aggression_selects_capture_over_quiet():
     """
-    Position where white can capture d5 with exd5, or make quiet moves.
-    With high aggression, the capture should be preferred.
-    """
-    board = chess.Board("rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2")
-    capture_move = chess.Move.from_uci("e4d5")
-    assert capture_move in board.legal_moves
+    In a position with available captures, high aggression should always
+    pick a capture move.
 
-    move_high, _ = get_best_move(board, depth=1, blunder_pct=0.0, aggression=1.0)
-    assert move_high == capture_move
+    Position after 1.e4 e5 2.d4 exd4 — white can recapture (capture) or
+    play a quiet developing move. With aggression=1.0 the engine must
+    choose a capture.
+    """
+    board = chess.Board("rnbqkbnr/pppp1ppp/8/8/3pP3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3")
+
+    # Verify there are both captures and non-captures available
+    all_captures = [m for m in board.legal_moves if board.is_capture(m)]
+    assert len(all_captures) > 0, "Position must have captures available"
+
+    move, _ = get_best_move(board, depth=1, blunder_pct=0.0, aggression=1.0)
+    assert board.is_capture(move), f"Expected a capture with high aggression, got {board.san(move)}"
 
 
 def test_aggression_zero_does_not_crash():

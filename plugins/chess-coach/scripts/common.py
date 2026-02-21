@@ -163,6 +163,7 @@ def get_best_move(
     is_white = board.turn == chess.WHITE
     best_move = moves[0]
     best_val = -999999 if is_white else 999999
+    best_clean_val = 0
 
     aggression_bonus = int(aggression * 50)
 
@@ -170,17 +171,23 @@ def get_best_move(
         is_capture = board.is_capture(move)  # check before push
         board.push(move)
         val = minimax(board, depth - 1, -999999, 999999, not is_white)
-        # Apply aggression bonus inside the same push context
+        # Apply aggression bonus for captures and checks (ordering only)
         if aggression_bonus > 0:
             gives_check = board.is_check()
             if is_capture or gives_check:
-                val = val + aggression_bonus if is_white else val - aggression_bonus
+                ordering_val = val + aggression_bonus if is_white else val - aggression_bonus
+            else:
+                ordering_val = val
+        else:
+            ordering_val = val
         board.pop()
 
-        if (is_white and val > best_val) or (not is_white and val < best_val):
-            best_val, best_move = val, move
+        if (is_white and ordering_val > best_val) or (not is_white and ordering_val < best_val):
+            best_val = ordering_val
+            best_move = move
+            best_clean_val = val  # track the clean score for the winning move
 
-    return best_move, best_val
+    return best_move, best_clean_val
 
 
 def classify_move(delta_cp: int) -> tuple[str, str]:
