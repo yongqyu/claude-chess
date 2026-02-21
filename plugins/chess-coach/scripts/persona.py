@@ -15,7 +15,10 @@ import argparse
 import glob
 import json
 import os
+import subprocess
 import sys
+import tempfile
+from collections import Counter
 from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -24,6 +27,8 @@ from common import estimate_elo, elo_to_level
 BUNDLED_DIR_DEFAULT = os.path.join(os.path.dirname(__file__), "..", "personas")
 USER_DIR_DEFAULT    = os.path.expanduser("~/.chess_coach/personas")
 GAMES_DIR_DEFAULT   = os.path.expanduser("~/.chess_coach/games")
+
+OPENING_MOVE_COUNT = 5
 
 
 def load_persona(persona_id: str, bundled_dir: str, user_dir: str) -> dict | None:
@@ -49,8 +54,9 @@ def list_personas(bundled_dir: str, user_dir: str) -> list[dict]:
                     "name":   p["name"],
                     "source": p["source"],
                 }
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Warning: skipping {path}: {e}", file=sys.stderr)
+                continue
     return list(seen.values())
 
 
@@ -68,8 +74,6 @@ def cmd_show(args) -> dict:
 
 def extract_machine_layer(actor: str, games_dir: str) -> dict | None:
     """Read game JSONs, filter by actor, compute machine layer."""
-    from collections import Counter
-
     all_records = []
     game_count  = 0
 
@@ -85,46 +89,52 @@ def extract_machine_layer(actor: str, games_dir: str) -> dict | None:
         if not actor_records:
             continue
 
-        # Track per-game move index per color for opening_moves computation
-        white_move_idx = 0
-        black_move_idx = 0
-        for r in records:
-            color = r.get("player")
-            if color == "white":
-                r = dict(r, _white_move_idx=white_move_idx)
-                white_move_idx += 1
-            elif color == "black":
-                r = dict(r, _black_move_idx=black_move_idx)
-                black_move_idx += 1
+        white_idx = 0
+        black_idx = 0
+        for r in actor_records:
+            r = dict(r)  # don't mutate original
+            if r.get("player") == "white":
+                r["_white_move_idx"] = white_idx
+                white_idx += 1
+            elif r.get("player") == "black":
+                r["_black_move_idx"] = black_idx
+                black_idx += 1
             all_records.append(r)
         game_count += 1
 
     if not all_records:
         return None
 
-    def top_moves(color, n=5):
+    def top_moves(color, n=OPENING_MOVE_COUNT):
         c = Counter()
         idx_key = f"_{color}_move_idx"
         for r in all_records:
-            if r.get("actor") == actor and r.get("player") == color:
-                if r.get(idx_key, 999) < 5:
+            if r.get("player") == color:
+                if r.get(idx_key, OPENING_MOVE_COUNT + 1) < OPENING_MOVE_COUNT:
                     c[r["move_san"]] += 1
         return [m for m, _ in c.most_common(n)]
 
     white_moves = top_moves("white")
     black_moves = top_moves("black")
 
-    actor_records = [r for r in all_records if r.get("actor") == actor]
-    total    = len(actor_records)
-    captures = sum(1 for r in actor_records if "x" in r.get("move_san", ""))
+    total    = len(all_records)
+    captures = sum(1 for r in all_records if "x" in r.get("move_san", ""))
     aggression = round(captures / total, 3) if total else 0.0
 
-    white_count    = sum(1 for r in actor_records if r.get("player") == "white")
-    dominant_color = "white" if white_count >= total / 2 else "black"
-    elo_data       = estimate_elo(actor_records, player=dominant_color)
+    elo_white = estimate_elo(all_records, player="white")
+    elo_black = estimate_elo(all_records, player="black")
 
-    acpl         = elo_data.get("acpl") or 80.0
-    blunder_rate = elo_data.get("blunder_rate") or 0.05
+    # Average the metrics from whichever sides have data
+    cpls = []
+    blunders = []
+    for ed in [elo_white, elo_black]:
+        if ed.get("acpl") is not None:
+            cpls.append(ed["acpl"])
+        if ed.get("blunder_rate") is not None:
+            blunders.append(ed["blunder_rate"])
+
+    acpl         = sum(cpls) / len(cpls) if cpls else 0.0
+    blunder_rate = sum(blunders) / len(blunders) if blunders else 0.0
 
     if acpl < 40:
         depth = 3
@@ -164,45 +174,49 @@ def cmd_extract(args) -> dict:
 
 
 def cmd_import_pgn(args) -> dict:
-    import tempfile
-    import subprocess
-
-    tmp_dir = tempfile.mkdtemp(prefix="pgn_games_")
     adapter = os.path.join(os.path.dirname(__file__), "pgn_adapter.py")
 
-    r = subprocess.run(
-        [sys.executable, adapter,
-         "--pgn", args.pgn, "--player", args.player, "--output", tmp_dir],
-        capture_output=True, text=True
-    )
-    try:
-        adapter_result = json.loads(r.stdout)
-    except Exception:
-        return {"ok": False, "error": f"PGN adapter failed: {r.stderr}"}
+    with tempfile.TemporaryDirectory(prefix="pgn_games_") as tmp_dir:
+        r = subprocess.run(
+            [sys.executable, adapter,
+             "--pgn", args.pgn, "--player", args.player, "--output", tmp_dir],
+            capture_output=True, text=True
+        )
 
-    if not adapter_result.get("ok"):
-        return {"ok": False, "error": "PGN conversion failed", "details": adapter_result}
+        if r.returncode != 0 or not r.stdout.strip():
+            return {"ok": False, "error": f"PGN adapter failed: {r.stderr.strip()}"}
 
-    machine = extract_machine_layer(args.player, tmp_dir)
-    if not machine:
-        return {"ok": False, "error": "No moves found for player in PGN"}
+        try:
+            adapter_result = json.loads(r.stdout)
+        except Exception:
+            return {"ok": False, "error": f"PGN adapter failed: {r.stderr}"}
 
-    persona = {
-        "id":             args.id,
-        "name":           args.player,
-        "source":         "pgn",
-        "description":    "",
-        "personality":    "",
-        "move_voice":     "",
-        "coaching_voice": "",
-        "created_at":     datetime.now().isoformat(),
-        **machine,
-    }
+        if not adapter_result.get("ok"):
+            return {"ok": False, "error": "PGN conversion failed", "details": adapter_result}
 
-    if args.output:
-        os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
-        with open(args.output, "w") as f:
-            json.dump(persona, f, indent=2, ensure_ascii=False)
+        if adapter_result.get("games_written", 0) == 0:
+            return {"ok": False, "error": f"Player '{args.player}' not found in any game in the PGN file."}
+
+        machine = extract_machine_layer(args.player, tmp_dir)
+        if not machine:
+            return {"ok": False, "error": "No moves found for player in PGN"}
+
+        persona = {
+            "id":             args.id,
+            "name":           args.player,
+            "source":         "pgn",
+            "description":    "",
+            "personality":    "",
+            "move_voice":     "",
+            "coaching_voice": "",
+            "created_at":     datetime.now().isoformat(),
+            **machine,
+        }
+
+        if args.output:
+            os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+            with open(args.output, "w") as f:
+                json.dump(persona, f, indent=2, ensure_ascii=False)
 
     return {"ok": True, "persona": persona}
 
@@ -236,6 +250,11 @@ def main():
     ip.add_argument("--user-dir",    default=USER_DIR_DEFAULT)
 
     args = p.parse_args()
+
+    if not args.command:
+        p.print_help()
+        sys.exit(1)
+
     args.bundled_dir = os.path.expanduser(args.bundled_dir)
     args.user_dir    = os.path.expanduser(args.user_dir)
     if hasattr(args, "games_dir"):
