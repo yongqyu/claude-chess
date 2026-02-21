@@ -2,8 +2,6 @@
 
 > I got tired of alt-tabbing between my terminal and a chess website. So I built a chess coach that lives inside Claude Code.
 
-<img width="1242" height="929" alt="image" src="https://github.com/user-attachments/assets/5a86f087-5329-434d-ae4f-70db7173aab0" />
-
 ---
 
 ## What is this?
@@ -18,38 +16,56 @@ No Stockfish required. No separate app. Just Claude.
 
 ## What it looks like in practice
 
+The board appears in two places, each optimized for its context.
+
+**In the Claude Code chat** — plain Unicode, readable inline after every move:
+
 ```
-♟  Chess Coach
+    a   b   c   d   e   f   g   h
+  ┌───┬───┬───┬───┬───┬───┬───┬───┐
+8 │ ♜ │ ♞ │ ♝ │ ♛ │ ♚ │ ♝ │ ♞ │ ♜ │
+  ├───┼───┼───┼───┼───┼───┼───┼───┤
+7 │ ♟ │ ♟ │ ♟ │ ♟ │   │ ♟ │ ♟ │ ♟ │
+  ├───┼───┼───┼───┼───┼───┼───┼───┤
+6 │   │   │   │   │   │   │   │   │
+  ├───┼───┼───┼───┼───┼───┼───┼───┤
+5 │   │   │   │   │ ♟ │   │   │   │
+  ├───┼───┼───┼───┼───┼───┼───┼───┤
+4 │   │   │   │   │   │   │   │   │
+  ├───┼───┼───┼───┼───┼───┼───┼───┤
+3 │   │   │   │   │   │ ♘ │   │   │
+  ├───┼───┼───┼───┼───┼───┼───┼───┤
+2 │ ♙ │ ♙ │ ♙ │ ♙ │ ♙ │ ♙ │ ♙ │ ♙ │
+  ├───┼───┼───┼───┼───┼───┼───┼───┤
+1 │ ♖ │ ♘ │ ♗ │ ♕ │ ♔ │ ♗ │   │ ♖ │
+  └───┴───┴───┴───┴───┴───┴───┴───┘
+    a   b   c   d   e   f   g   h
 
-8 │ ♜  ♞  ♝  ♛  ♚  ♝     ♜ │
-7 │ ♟  ♟  ♟  ♟  ♟  ♟  ♟  ♟ │
-6 │                   ♞      │
-5 │                          │
-4 │             ♙            │
-3 │                          │
-2 │ ♙  ♙  ♙  ♙     ♙  ♙  ♙ │
-1 │ ♖  ♘  ♗  ♕  ♔  ♗  ♘  ♖ │
-  ─────────────────────────────
-    a  b  c  d  e  f  g  h
+  W 54%  /  B 46%
 
-  [█████████████░░░░░░░░░░░░░░░]  W 45% / B 55%
+  1. Nf3 e5
 
-  1. e4 Nf6
-  ──────────────────────────────────────────────────
-  AI played Nf6. Knight g8 → f6.
-  Captures center influence — Alekhine's Defense.
-  Win rate (White): 45%
-  ──────────────────────────────────────────────────
-  ⬜ White to move  │  Level: Intermediate  │  Alekhine's Defense
+  ────────────────────────────────────────────────────
+  AI played e5.
+    Pawn e7 → e5.
+    Maintains balance while staying active.
+  Win rate (White): 54%
+  ────────────────────────────────────────────────────
+
+  ⬜ White to move  |  Level: Intermediate  |  Mode: Play  |  Playing: White
 ```
 
-The board stays fixed at the top of your terminal. Coaching text appears below it after every move.
+**In the terminal** (press `Ctrl+O` in Claude Code, or run in a plain terminal) — full color ANSI board with highlighted last move, colored squares, and win-probability bar:
+
+<img width="1242" height="929" alt="image" src="https://github.com/user-attachments/assets/5a86f087-5329-434d-ae4f-70db7173aab0" />
+
+ANSI color codes are terminal-only — they can't render in markdown chat. The chat board gives you what you need at a glance; the terminal board is there when you want the full visual.
 
 ---
 
 ## Features
 
-- **Live ANSI board** — Unicode pieces, colored squares, last move highlighted in yellow
+- **Two board views** — plain Unicode board in the chat after every move; full color ANSI board with highlighted last move and win-probability bar in the terminal (`Ctrl+O` in Claude Code)
 - **Real-time coaching** — rates every move (brilliant ✨ / good ✅ / inaccuracy ⚠️ / mistake ❌ / blunder 💀), shows win probability shift, and suggests better alternatives
 - **AI explains itself** — after every AI move, Claude tells you *why* it played that
 - **Opening detection** — recognizes 20 common openings and names them as they appear
@@ -120,7 +136,7 @@ scripts/
   common.py    Evaluation, minimax, opening DB, ELO formula
   engine.py    Move validation, AI moves, game state
   coach.py     Move quality, coaching text, annotations
-  render.py    ANSI board renderer
+  render.py    Board renderer — `--plain` for chat, `--clear` for ANSI terminal
   profile.py   ELO history, difficulty recommendation
   review.py    End-of-game Markdown review
 ```

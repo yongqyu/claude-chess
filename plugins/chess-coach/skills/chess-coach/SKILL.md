@@ -89,37 +89,13 @@ python3 "$SCRIPT_DIR/render.py" --clear
 ### Step 3 — Render the board
 
 ```bash
-python3 "$SCRIPT_DIR/render.py" --clear
+BOARD=$(python3 "$SCRIPT_DIR/render.py" --plain)
 ```
 
-Use `--clear` on every render during gameplay to keep the board fixed at the
-top of the terminal.
-
-**Always print a plain-text board in the conversation after every move** (both
-after the user's move and after the AI's response). The user must always see
-the board in the chat. Output this in your reply:
-
-```python
-import chess, json, os
-state = json.load(open(os.path.expanduser('~/.chess_coach/current_game.json')))
-board = chess.Board()
-for uci in state.get('moves_uci', []): board.push(chess.Move.from_uci(uci))
-pieces = {'K':'♔','Q':'♕','R':'♖','B':'♗','N':'♘','P':'♙','k':'♚','q':'♛','r':'♜','b':'♝','n':'♞','p':'♟'}
-print('\n    a   b   c   d   e   f   g   h')
-print('  ┌───┬───┬───┬───┬───┬───┬───┬───┐')
-for rank in range(7,-1,-1):
-    row = f'{rank+1} │'
-    for file in range(8):
-        p = board.piece_at(chess.square(file,rank))
-        row += f' {pieces[p.symbol()] if p else " "} │'
-    print(row)
-    if rank > 0: print('  ├───┼───┼───┼───┼───┼───┼───┼───┤')
-print('  └───┴───┴───┴───┴───┴───┴───┴───┘')
-print('    a   b   c   d   e   f   g   h')
-```
-
-Include the output as a code block in your reply so the user sees the board
-in the conversation without needing to look at the terminal.
+**Always include `$BOARD` as a code block in your reply after every move.**
+The `--plain` flag produces clean text with no ANSI codes, readable directly
+in the chat. Do NOT use `--clear`; it sends ANSI escape codes to the terminal
+which are not visible in the Claude Code chat window.
 
 ---
 
@@ -141,12 +117,12 @@ print(len(s['move_records'])-1)
 ")
 python3 "$SCRIPT_DIR/coach.py" annotate --move_idx $MOVE_IDX --text "<coaching_text>"
 
-# 4. Re-render (terminal + plain-text in reply)
-python3 "$SCRIPT_DIR/render.py" --clear
+# 4. Capture plain-text board for chat
+BOARD=$(python3 "$SCRIPT_DIR/render.py" --plain)
 ```
 
 Claude then relays `coaching_lines` from step 1 conversationally,
-and includes the plain-text board in the reply (see Step 3 above).
+and includes `$BOARD` as a code block in the reply.
 
 ### AI's move
 
@@ -157,12 +133,12 @@ python3 "$SCRIPT_DIR/engine.py" ai_move
 # 2. Generate and persist AI explanation
 python3 "$SCRIPT_DIR/coach.py" explain_ai
 
-# 3. Re-render (terminal + plain-text in reply)
-python3 "$SCRIPT_DIR/render.py" --clear
+# 3. Capture plain-text board for chat
+BOARD=$(python3 "$SCRIPT_DIR/render.py" --plain)
 ```
 
 Claude relays `coaching_lines` from explain_ai,
-and includes the plain-text board in the reply (see Step 3 above).
+and includes `$BOARD` as a code block in the reply.
 
 ---
 
@@ -218,10 +194,11 @@ If Claude loses context mid-game, recover instantly:
 
 ```bash
 python3 "$SCRIPT_DIR/engine.py" status
-python3 "$SCRIPT_DIR/render.py" --clear
+BOARD=$(python3 "$SCRIPT_DIR/render.py" --plain)
 ```
 
 Tell the user: "I've reloaded the game from disk — here's the current position."
+Then include `$BOARD` as a code block in the reply.
 
 ---
 

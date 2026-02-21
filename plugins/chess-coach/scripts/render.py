@@ -168,6 +168,77 @@ def render_status(board: chess.Board, state: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Plain (no-ANSI) render — suitable for capturing into chat output
+# ---------------------------------------------------------------------------
+def plain_render(state: dict) -> str:
+    """Return a clean plain-text board with no ANSI codes."""
+    board     = board_from_state(state)
+    moves_uci = state.get("moves_uci", [])
+    records   = state.get("move_records", [])
+    wr_white  = records[-1]["winrate_white"] if records else 0.5
+    coaching  = records[-1].get("coaching") if records else None
+
+    pieces = {
+        'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+        'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟',
+    }
+
+    lines = []
+    lines.append("    a   b   c   d   e   f   g   h")
+    lines.append("  ┌───┬───┬───┬───┬───┬───┬───┬───┐")
+    for rank in range(7, -1, -1):
+        row = f"{rank + 1} │"
+        for file in range(8):
+            sq = chess.square(file, rank)
+            p  = board.piece_at(sq)
+            row += f" {pieces[p.symbol()] if p else ' '} │"
+        lines.append(row)
+        if rank > 0:
+            lines.append("  ├───┼───┼───┼───┼───┼───┼───┼───┤")
+    lines.append("  └───┴───┴───┴───┴───┴───┴───┴───┘")
+    lines.append("    a   b   c   d   e   f   g   h")
+    lines.append("")
+
+    w_pct = int(wr_white * 100)
+    b_pct = 100 - w_pct
+    lines.append(f"  W {w_pct}%  /  B {b_pct}%")
+    lines.append("")
+
+    moves_san = state.get("moves_san", [])
+    if moves_san:
+        pairs = []
+        for i in range(0, len(moves_san), 2):
+            n      = i // 2 + 1
+            white_m = moves_san[i]
+            black_m = moves_san[i + 1] if i + 1 < len(moves_san) else "..."
+            pairs.append(f"{n}. {white_m} {black_m}")
+        shown = pairs[-8:]
+        if len(pairs) > 8:
+            shown = ["..."] + shown
+        lines.append("  " + "   ".join(shown))
+        lines.append("")
+
+    if coaching:
+        lines.append("  " + "─" * 52)
+        for line in coaching.strip().split("\n"):
+            lines.append(f"  {line}")
+        lines.append("  " + "─" * 52)
+        lines.append("")
+
+    turn    = "⬜ White to move" if board.turn == chess.WHITE else "⬛ Black to move"
+    level   = state.get("level", "?").capitalize()
+    mode    = state.get("mode",  "?").capitalize()
+    color   = state.get("color", "?").capitalize()
+    check   = "  CHECK!" if board.is_check() else ""
+    lines.append(f"  {turn}{check}  |  Level: {level}  |  Mode: {mode}  |  Playing: {color}")
+
+    if board.is_game_over():
+        lines.append(f"\n  Game over — Result: {state.get('result', '?')}")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Full render
 # ---------------------------------------------------------------------------
 def full_render(state: dict, do_clear: bool) -> str:
@@ -213,13 +284,18 @@ def main():
     p.add_argument("--state", default="~/.chess_coach/current_game.json")
     p.add_argument("--clear", action="store_true",
                    help="Clear the terminal before rendering (fixed-position effect)")
+    p.add_argument("--plain", action="store_true",
+                   help="Output plain text with no ANSI codes (for capturing into chat)")
     args = p.parse_args()
     args.state = os.path.expanduser(args.state)
 
     with open(args.state) as f:
         state = json.load(f)
 
-    output = full_render(state, args.clear)
+    if args.plain:
+        output = plain_render(state)
+    else:
+        output = full_render(state, args.clear)
     sys.stdout.write(output)
     sys.stdout.flush()
 
