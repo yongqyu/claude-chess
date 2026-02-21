@@ -10,7 +10,8 @@ description: |
 
 All game logic lives in Python scripts. Claude acts as orchestrator:
 calls scripts in the correct order, reads their JSON output, and delivers
-coaching naturally in conversation.
+coaching naturally in conversation. Keep thinking brief — only reason at
+length when the situation needs guidance or coaching commentary.
 
 ## Finding the Scripts
 
