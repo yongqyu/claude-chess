@@ -57,7 +57,7 @@ The board appears in two places, each optimized for its context.
 
 **In the terminal** (press `Ctrl+O` in Claude Code, or run in a plain terminal) — full color ANSI board with highlighted last move, colored squares, and win-probability bar:
 
-<img width="1242" height="929" alt="image" src="https://github.com/user-attachments/assets/5a86f087-5329-434d-ae4f-70db7173aab0" />
+<img width="1196" height="790" alt="image" src="https://github.com/user-attachments/assets/d816f062-38a9-4557-b464-c573d45b9bad" />
 
 ANSI color codes are terminal-only — they can't render in markdown chat. The chat board gives you what you need at a glance; the terminal board is there when you want the full visual.
 
