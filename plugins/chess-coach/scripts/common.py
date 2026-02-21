@@ -165,7 +165,7 @@ def get_best_move(
     best_val = -999999 if is_white else 999999
     best_clean_val = 0
 
-    aggression_bonus = int(aggression * 50)
+    aggression_bonus = round(aggression * 50)
 
     for move in moves:
         is_capture = board.is_capture(move)  # check before push

@@ -32,6 +32,7 @@ def test_ai_move_with_persona_succeeds(tmp_path):
     result = ai_move(state, persona_id="tal", persona_dir=PERSONAS)
     assert result["ok"] is True
     assert result["move_san"] != ""
+    assert result["persona_used"] == "tal"
 
 
 def test_ai_move_without_persona_still_works(tmp_path):
