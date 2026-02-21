@@ -3,6 +3,8 @@
 A Claude Code plugin that turns Claude into an interactive chess coach with
 ANSI terminal board, adaptive AI, ELO tracking, and real-time coaching.
 
+<img width="1242" height="929" alt="image" src="https://github.com/user-attachments/assets/5a86f087-5329-434d-ae4f-70db7173aab0" />
+
 ## Installation
 
 ### Option A — Claude Code commands (preferred)
