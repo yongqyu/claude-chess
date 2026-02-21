@@ -95,9 +95,9 @@ python3 "$SCRIPT_DIR/render.py" --clear
 Use `--clear` on every render during gameplay to keep the board fixed at the
 top of the terminal.
 
-**Always also print a plain-text board in the conversation** so the user can
-see the position without looking at the terminal. After every render, output
-this in your reply:
+**Always print a plain-text board in the conversation after every move** (both
+after the user's move and after the AI's response). The user must always see
+the board in the chat. Output this in your reply:
 
 ```python
 import chess, json, os
