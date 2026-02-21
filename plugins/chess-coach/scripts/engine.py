@@ -100,14 +100,16 @@ def make_move_record(
     move: chess.Move,
     san: str,
     player: str,
+    actor: str,
     score_before: int,
     score_after: int,
 ) -> dict:
     """Build a move record dict for storage in state['move_records']."""
     return {
-        "move_san":       san,
-        "move_uci":       move.uci(),
-        "player":         player,   # "white" or "black"
+        "move_san":        san,
+        "move_uci":        move.uci(),
+        "player":          player,  # "white" or "black"
+        "actor":           actor,   # "human" or "ai"
         "score_before_cp": score_before,
         "score_after_cp":  score_after,
         "winrate_white":   score_to_winrate(score_after, chess.WHITE),
@@ -132,11 +134,18 @@ def check_game_over(board: chess.Board, state: dict) -> None:
 # Commands
 # ---------------------------------------------------------------------------
 def cmd_new_game(args) -> dict:
-    board = chess.Board()
-    score = evaluate(board)
+    board      = chess.Board()
+    score      = evaluate(board)
+    human_name = args.player or "human"
+    players    = {
+        args.color:                                        human_name,
+        "black" if args.color == "white" else "white":    "ai",
+    }
     state = {
         "color":        args.color,
-        "level":        args.level,  # may be "auto" until profile resolves it
+        "player_name":  human_name,
+        "players":      players,   # {"white": name_or_"ai", "black": name_or_"ai"}
+        "level":        args.level,
         "mode":         args.mode,
         "moves_uci":    [],
         "moves_san":    [],
@@ -152,6 +161,7 @@ def cmd_new_game(args) -> dict:
         "score_cp":       score,
         "winrate_white":  score_to_winrate(score, chess.WHITE),
         "state_file":     args.state,
+        "players":        players,
     }
 
 
@@ -162,6 +172,7 @@ def cmd_move(args) -> dict:
     score_before = evaluate(board)
     turn_before  = board.turn
     player       = "white" if turn_before == chess.WHITE else "black"
+    actor        = state.get("players", {}).get(player, "human")
 
     move, err = parse_move(args.move, board)
     if err:
@@ -171,7 +182,7 @@ def cmd_move(args) -> dict:
     board.push(move)
     score_after = evaluate(board)
 
-    record = make_move_record(move, san, player, score_before, score_after)
+    record = make_move_record(move, san, player, actor, score_before, score_after)
     state["moves_uci"].append(move.uci())
     state["moves_san"].append(san)
     state["move_records"].append(record)
@@ -213,6 +224,7 @@ def cmd_ai_move(args) -> dict:
     score_before = evaluate(board)
     turn_before  = board.turn
     player       = "white" if turn_before == chess.WHITE else "black"
+    actor        = state.get("players", {}).get(player, "ai")
 
     level      = state.get("level", "intermediate")
     depth      = DEPTH_MAP.get(level, 2)
@@ -226,7 +238,7 @@ def cmd_ai_move(args) -> dict:
     board.push(move)
     score_after = evaluate(board)
 
-    record = make_move_record(move, san, player, score_before, score_after)
+    record = make_move_record(move, san, player, actor, score_before, score_after)
     state["moves_uci"].append(move.uci())
     state["moves_san"].append(san)
     state["move_records"].append(record)
@@ -306,6 +318,8 @@ def main():
                     choices=["auto", "beginner", "intermediate", "advanced"])
     ng.add_argument("--mode",   default="play",
                     choices=["play", "coach"])
+    ng.add_argument("--player", default="human",
+                    help="Human player's nickname (stored in game record)")
     ng.add_argument("--state",  default="~/.chess_coach/current_game.json")
 
     # move

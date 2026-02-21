@@ -65,7 +65,13 @@ pip install chess --break-system-packages -q
 python3 "$SCRIPT_DIR/profile.py" recommend
 ```
 
-Read `recommended_level` and `note` from the output.
+Read `nickname`, `recommended_level`, and `note` from the output.
+- If `nickname` is null: ask the user "What should I call you?" and persist it:
+  ```bash
+  python3 "$SCRIPT_DIR/profile.py" set_nickname --name "<name>"
+  ```
+  Use the returned `nickname` for all subsequent references and game records.
+- If `nickname` is set: greet them by name — "Welcome back, <nickname>!"
 - If `games_played == 0`: inform the user this is their first game, default to `intermediate`.
 - Otherwise: say "Based on your last N games (ELO ~X), I'll set difficulty to Y."
 - Always let the user override.
@@ -76,7 +82,8 @@ Read `recommended_level` and `note` from the output.
 python3 "$SCRIPT_DIR/engine.py" new_game \
   --color white \           # or black — ask the user
   --level intermediate \    # resolved from profile or user override
-  --mode play               # play | coach
+  --mode play \             # play | coach
+  --player "<nickname>"     # the player's nickname from profile
 ```
 
 **If user plays Black:** the AI moves first immediately after new_game:

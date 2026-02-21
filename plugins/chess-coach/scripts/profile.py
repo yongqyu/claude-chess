@@ -12,6 +12,7 @@ Games index:  ~/.chess_coach/games/  (saved state files)
 
 Profile schema:
   {
+    "nickname":     str | null,       # player's chosen display name
     "games_played": int,
     "elo_history":  [int, ...],       # one entry per completed game
     "elo_current":  int | null,
@@ -45,6 +46,7 @@ def load_profile(path: str) -> dict:
         with open(path) as f:
             return json.load(f)
     return {
+        "nickname":     None,
         "games_played": 0,
         "elo_history":  [],
         "elo_current":  None,
@@ -131,10 +133,11 @@ def cmd_update(args) -> dict:
 
 def cmd_recommend(args) -> dict:
     """Return the recommended difficulty level based on profile history."""
-    profile = load_profile(args.profile)
-    elo     = profile.get("elo_current")
-    level   = profile.get("level", "intermediate")
-    games   = profile.get("games_played", 0)
+    profile  = load_profile(args.profile)
+    elo      = profile.get("elo_current")
+    level    = profile.get("level", "intermediate")
+    games    = profile.get("games_played", 0)
+    nickname = profile.get("nickname")
 
     note = ""
     if games == 0:
@@ -145,12 +148,21 @@ def cmd_recommend(args) -> dict:
         note = f"Based on {games} games. Smoothed ELO: {elo}."
 
     return {
-        "ok":            True,
+        "ok":                True,
+        "nickname":          nickname,
         "recommended_level": level,
-        "elo_current":   elo,
-        "games_played":  games,
-        "note":          note,
+        "elo_current":       elo,
+        "games_played":      games,
+        "note":              note,
     }
+
+
+def cmd_set_nickname(args) -> dict:
+    """Persist the player's nickname to their profile."""
+    profile = load_profile(args.profile)
+    profile["nickname"] = args.name
+    save_profile(profile, args.profile)
+    return {"ok": True, "nickname": args.name}
 
 
 def cmd_history(args) -> dict:
@@ -199,14 +211,18 @@ def main():
     upd.add_argument("--state", required=True,
                      help="Path to completed game state JSON")
 
+    sn = sub.add_parser("set_nickname")
+    sn.add_argument("--name", required=True, help="Player's nickname")
+
     args = p.parse_args()
     args.profile = os.path.expanduser(args.profile)
 
     dispatch = {
-        "load":      cmd_load,
-        "update":    cmd_update,
-        "recommend": cmd_recommend,
-        "history":   cmd_history,
+        "load":         cmd_load,
+        "update":       cmd_update,
+        "recommend":    cmd_recommend,
+        "history":      cmd_history,
+        "set_nickname": cmd_set_nickname,
     }
     result = dispatch[args.command](args)
     print(json.dumps(result, ensure_ascii=False, indent=2))
