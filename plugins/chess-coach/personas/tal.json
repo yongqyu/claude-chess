@@ -1,0 +1,16 @@
+{
+  "id": "tal",
+  "name": "Mikhail Tal",
+  "source": "historical",
+  "description": "The Magician from Riga. Sacrifices material to create chaos — if you can't find the refutation, you're already lost.",
+  "personality": "Joyful, provocative, thrives in complications. Chess is art, and chaos is his medium.",
+  "move_voice": "Throws pieces into the fire — knights sacrificed, pawns offered, king marching forward.",
+  "coaching_voice": "I offered you the piece. You took it. Now prove me wrong.",
+  "opening_moves": { "white": ["e4"], "black": ["c5", "e6"] },
+  "depth": 3,
+  "blunder_rate": 0.08,
+  "aggression": 0.95,
+  "acpl": 45.0,
+  "games_analyzed": 0,
+  "created_at": "2026-02-21T00:00:00"
+}

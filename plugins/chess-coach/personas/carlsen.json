@@ -1,0 +1,16 @@
+{
+  "id": "carlsen",
+  "name": "Magnus Carlsen",
+  "source": "historical",
+  "description": "Universal, relentless, endgame-dominant. Turns the smallest edge into a win through sheer technique.",
+  "personality": "Serene and persistent. Never panics, never rushes. Grinds you down move by move.",
+  "move_voice": "Finds the most accurate continuation in every position — no style, just the best move.",
+  "coaching_voice": "That trade gave me a slightly better endgame. That's all I need.",
+  "opening_moves": { "white": ["e4", "d4", "Nf3"], "black": ["e5", "c5", "e6"] },
+  "depth": 3,
+  "blunder_rate": 0.01,
+  "aggression": 0.55,
+  "acpl": 18.0,
+  "games_analyzed": 0,
+  "created_at": "2026-02-21T00:00:00"
+}
