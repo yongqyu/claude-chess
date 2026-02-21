@@ -44,6 +44,10 @@ python3 "$SCRIPT_DIR/persona.py" extract \
 
 Read `persona` from the JSON output (machine layer only — no character voice yet).
 
+If `result["ok"]` is false (e.g., no games found for this actor), inform the
+user: "No game records found for '<nickname>'. Play some games first, then
+try again." and stop.
+
 ### Step 2b — PGN path
 
 Ask: "Path to the PGN file?" and "Player name in the PGN?" and "Persona ID?"
@@ -56,6 +60,9 @@ python3 "$SCRIPT_DIR/persona.py" import_pgn \
 ```
 
 Read `persona` from the JSON output.
+
+If `result["ok"]` is false, inform the user with the error message from
+`result["error"]` and stop.
 
 ### Step 3 — Claude enriches the character layer
 
@@ -75,22 +82,9 @@ Guidelines:
 
 Then write the full persona to disk:
 
-```bash
-python3 -c "
-import json, os
-path = os.path.expanduser('~/.chess_coach/personas/<id>.json')
-os.makedirs(os.path.dirname(path), exist_ok=True)
-# Read stats from the extract output above
-persona = <the persona dict from Step 2>
-persona['description']    = '<generated>'
-persona['personality']    = '<generated>'
-persona['move_voice']     = '<generated>'
-persona['coaching_voice'] = '<generated>'
-with open(path, 'w') as f:
-    json.dump(persona, f, indent=2, ensure_ascii=False)
-print('saved')
-"
-```
+Write the complete persona JSON to `~/.chess_coach/personas/<id>.json` using the Write tool.
+Combine the machine layer fields from the `persona.py` output (Step 2) with
+the character fields you just generated.
 
 ### Step 4 — Confirm
 

@@ -84,7 +84,8 @@ python3 "$SCRIPT_DIR/persona.py" list \
   --user-dir ~/.chess_coach/personas
 ```
 
-Show the available personas to the user with their names and descriptions.
+Show available personas as a numbered list (name and source only — descriptions
+are loaded when a persona is selected). Let the user pick by number or name.
 Ask: "Play against the standard AI, or choose a persona?"
 
 - If user chooses a persona: set `PERSONA_ID` for this session, load its full data:
@@ -230,6 +231,10 @@ BOARD=$(python3 "$SCRIPT_DIR/render.py" --plain)
 
 Tell the user: "I've reloaded the game from disk — here's the current position."
 Then include `$BOARD` as a code block in the reply.
+
+**If a persona was active:** The current game state does not store the active persona ID.
+Ask the user: "Were you playing against a persona? If so, which one?" and reload
+it via `persona.py show` if they respond with a name.
 
 ---
 
