@@ -128,3 +128,29 @@ def test_extract_character_layer_empty(tmp_path, sample_game_records):
     assert persona["personality"] == ""
     assert persona["move_voice"] == ""
     assert persona["coaching_voice"] == ""
+
+
+# ── import_pgn tests ──────────────────────────────────────────────────────
+
+SAMPLE_PGN = """[Event "Test"]
+[White "Fischer"]
+[Black "Opponent"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 1-0
+"""
+
+
+def test_import_pgn_creates_persona(tmp_path):
+    pgn_file = tmp_path / "test.pgn"
+    pgn_file.write_text(SAMPLE_PGN)
+    out = tmp_path / "fischer_extracted.json"
+    result = run([sys.executable, f"{SCRIPTS}/persona.py", "import_pgn",
+                  "--pgn", str(pgn_file), "--player", "Fischer",
+                  "--id", "fischer_test", "--output", str(out)])
+    assert result["ok"] is True
+    assert out.exists()
+    persona = json.loads(out.read_text())
+    assert persona["id"] == "fischer_test"
+    assert persona["source"] == "pgn"
+    assert "e4" in persona["opening_moves"]["white"]
