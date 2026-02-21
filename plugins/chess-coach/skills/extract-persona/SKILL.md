@@ -10,15 +10,15 @@ description: |
 
 ## Finding Scripts
 
-When this skill loads, your context will include a line like:
-  Base directory for this skill: /path/to/.../skills/extract-persona
+The scripts and personas live at fixed paths relative to the repo root:
 
-```bash
-SKILL_BASE="<the Base directory path from your context>"
-SCRIPT_DIR="$(python3 -c "import os,sys; print(os.path.normpath(os.path.join(sys.argv[1],'..','..','scripts')))" "$SKILL_BASE")"
-BUNDLED_PERSONA_DIR="$(python3 -c "import os,sys; print(os.path.normpath(os.path.join(sys.argv[1],'..','..','personas')))" "$SKILL_BASE")"
-USER_PERSONA_DIR="$HOME/.chess_coach/personas"
 ```
+SCRIPT_DIR         = plugins/chess-coach/scripts
+BUNDLED_PERSONA_DIR = plugins/chess-coach/personas
+USER_PERSONA_DIR    = ~/.chess_coach/personas
+```
+
+Every command uses these paths directly — no shell variable expansion needed.
 
 ## Flow
 
@@ -29,17 +29,13 @@ USER_PERSONA_DIR="$HOME/.chess_coach/personas"
 ### Step 2a — Game history path
 
 ```bash
-# Get nickname from profile
-python3 "$SCRIPT_DIR/profile.py" recommend
+python3 "plugins/chess-coach/scripts/profile.py" recommend
 ```
 
 Use `nickname` as the actor name. Ask for a persona ID (default: nickname).
 
 ```bash
-python3 "$SCRIPT_DIR/persona.py" extract \
-  --actor "<nickname>" \
-  --id "<id>" \
-  --games-dir ~/.chess_coach/games
+python3 "plugins/chess-coach/scripts/persona.py" extract --actor "<nickname>" --id "<id>" --games-dir ~/.chess_coach/games
 ```
 
 Read `persona` from the JSON output (machine layer only — no character voice yet).
@@ -53,10 +49,7 @@ try again." and stop.
 Ask: "Path to the PGN file?" and "Player name in the PGN?" and "Persona ID?"
 
 ```bash
-python3 "$SCRIPT_DIR/persona.py" import_pgn \
-  --pgn "<path>" \
-  --player "<player_name>" \
-  --id "<id>"
+python3 "plugins/chess-coach/scripts/persona.py" import_pgn --pgn "<path>" --player "<player_name>" --id "<id>"
 ```
 
 Read `persona` from the JSON output.

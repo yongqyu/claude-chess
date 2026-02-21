@@ -1,10 +1,13 @@
 {
   "permissions": {
     "allow": [
+      "Bash(python3 *)",
+      "Bash(git *)",
       "Bash(python3:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git -C /Users/yonggyu.park/Sides/claude-chess log --oneline)"
+      "Bash(git add *)",
+      "Bash(cat:*)",
+      "Bash(tail:*)"
     ]
   }
 }
