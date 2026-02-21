@@ -33,6 +33,24 @@ import chess
 DEPTH_MAP    = {"beginner": 1, "intermediate": 2, "advanced": 3}
 BLUNDER_MAP  = {"beginner": 0.25, "intermediate": 0.0, "advanced": 0.0}
 
+BUNDLED_PERSONA_DIR_DEFAULT = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "personas")
+)
+
+
+def load_persona_for_engine(persona_id: str, bundled_dir: str) -> dict | None:
+    """Load persona from user dir then bundled dir. Returns None if not found."""
+    user_dir = os.path.expanduser("~/.chess_coach/personas")
+    for directory in [user_dir, bundled_dir]:
+        path = os.path.join(directory, f"{persona_id}.json")
+        if os.path.exists(path):
+            try:
+                with open(path) as f:
+                    return json.load(f)
+            except Exception:
+                pass
+    return None
+
 
 # ---------------------------------------------------------------------------
 # Move parsing
@@ -226,13 +244,44 @@ def cmd_ai_move(args) -> dict:
     player       = "white" if turn_before == chess.WHITE else "black"
     actor        = state.get("players", {}).get(player, "ai")
 
-    level      = state.get("level", "intermediate")
-    depth      = DEPTH_MAP.get(level, 2)
-    blunder_pc = BLUNDER_MAP.get(level, 0.0)
+    # Resolve depth, blunder_pct, aggression — persona overrides level
+    persona      = None
+    opening_move = None
 
-    move, _ = get_best_move(board, depth, blunder_pc)
-    if not move:
-        return {"ok": False, "error": "No legal moves available."}
+    persona_id = getattr(args, "persona", None)
+    if persona_id:
+        bundled_dir = getattr(args, "bundled_persona_dir",
+                              BUNDLED_PERSONA_DIR_DEFAULT)
+        persona = load_persona_for_engine(persona_id, bundled_dir)
+
+    if persona:
+        depth      = persona.get("depth", 2)
+        blunder_pc = persona.get("blunder_rate", 0.0)
+        aggression = persona.get("aggression", 0.0)
+        # Opening book: use persona's preferred move if within first 10 moves
+        move_num   = state.get("move_count", 0)
+        if move_num < 10:
+            pref_moves = persona.get("opening_moves", {}).get(player, [])
+            for san in pref_moves:
+                try:
+                    candidate = board.parse_san(san)
+                    if candidate in board.legal_moves:
+                        opening_move = candidate
+                        break
+                except Exception:
+                    pass
+    else:
+        level      = state.get("level", "intermediate")
+        depth      = DEPTH_MAP.get(level, 2)
+        blunder_pc = BLUNDER_MAP.get(level, 0.0)
+        aggression = 0.0
+
+    if opening_move:
+        move = opening_move
+    else:
+        move, _ = get_best_move(board, depth, blunder_pc, aggression)
+        if not move:
+            return {"ok": False, "error": "No legal moves available."}
 
     san = board.san(move)
     board.push(move)
@@ -266,6 +315,7 @@ def cmd_ai_move(args) -> dict:
         "result":        state["result"],
         "moves_san":     state["moves_san"],
         "opening":       state.get("opening"),
+        "persona_used":  persona["id"] if persona else None,
     }
 
 
@@ -330,6 +380,10 @@ def main():
     # ai_move
     ai = sub.add_parser("ai_move")
     ai.add_argument("--state", default="~/.chess_coach/current_game.json")
+    ai.add_argument("--persona",             default=None,
+                    help="Persona ID to use for AI move")
+    ai.add_argument("--bundled-persona-dir", default=BUNDLED_PERSONA_DIR_DEFAULT,
+                    help="Path to bundled personas directory")
 
     # status
     st = sub.add_parser("status")
